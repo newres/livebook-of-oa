@@ -1,0 +1,258 @@
+# Livebook of Oa
+
+```elixir
+Mix.install([
+  {:kino_maplibre, "~> 0.1.12"},
+  {:kino_vega_lite, "~> 0.1.11"},
+  {:kino_bumblebee, "~> 0.5.0"},
+  {:exla, "~> 0.7.1"}
+],
+  config: [
+    nx: [
+      default_backend: EXLA.Backend,
+      default_defn_options: [compiler: EXLA]
+    ]
+  ],
+  system_env: [
+    XLA_TARGET: "cpu",
+  ]
+
+)
+```
+
+## Introduction
+
+This notebook aims to illustrate the working of Livebook with a few examples based on the [Green Lantern](https://en.wikipedia.org/wiki/Green_Lantern_(comic_book)) series of comic books.
+
+Much like many other "notebook style" interactive coding environments, it can combine code blocks, rich text, diagrams, interactivity and more into one cohesive experience. To show off a few things things first let's start off with the description of who the Green Lanterns are in Markdown (which is also how this description is written).
+
+<!-- livebook:{"break_markdown":true} -->
+
+Green Lanterns are superheroes that are part of an intergalactic law enforcement agency called the Green Lantern Corps. They derive their powers through their Power Rings, which they aim to control through their willpower. The Power Rings give the Green Lanters various powers such as flight, creating forcefields and contructs made for energy.
+
+The headquarters of the Green Lanterns are on the planet Oa, which is the home planet of the Guardians of the Universe. On the planet there is the Main Power Battery that powers all rings, as well as the Book of Oa (from which the name of this article is derived) which contains the laws and history of the Green Lantern Corps.
+
+<!-- livebook:{"break_markdown":true} -->
+
+Aside from Markdown, Livebooks can have many other types of content. For example we can create a diagram for the First Appearance of a number of Green Lanterns using the built in support for `Mermaid.js`.
+
+<!-- livebook:{"break_markdown":true} -->
+
+<!-- Learn more at https://mermaid-js.github.io/mermaid -->
+
+```mermaid
+timeline
+    title First Appearance
+    1959: Hal Jordan
+    1968: Guy Gardner
+    1972: John Stewart
+    1994: Kyle Rayner
+    2012: Simon Baz
+    2014: Jessica Cruz
+    2020: Sojurner Mullein
+```
+
+<!-- livebook:{"break_markdown":true} -->
+
+Code blocks can be written with the Elixir language (in which Livebook itself is written). For example we can define a struct to describe data relating to a lantern.
+
+```elixir
+defmodule Lantern do
+  defstruct name: "", color: :green, sector: "", home_town: "", appearances: 0
+end
+```
+
+Without diving deep into Elixir semantics, the Lantern struct holds data about the name, color, sector, home town and apperances of a lantern, with some basic default values. Notably the default value for their color is ```:green```, an atom denoting that the color of the Lanterns is in this representation by default green.
+
+<!-- livebook:{"break_markdown":true} -->
+
+With these structs we can specify the data of six green lanterns from earth, and put them in a list named ```green_lanterns_from_earth```.
+
+```elixir
+hal_jordan =  %Lantern{name: "Hal Jordan", sector: 2814, home_town: "Coast City, California", appearances: 5396  }
+guy_gardner =  %Lantern{name: "Guy Gardner", sector: 2814, home_town: "Baltimore", appearances: 1631 }
+john_stewart=  %Lantern{name: "John Stewart", sector: 2814, home_town: "Detroit, Michigan", appearances: 1866}
+kyle_rayner =  %Lantern{name: "Kyle Rayner", sector: 2814, home_town: "Los Angeles, California", appearances: 1696}
+simon_baz =  %Lantern{name: "Simon Baz", sector: 2814, home_town: "Dearborn, Michigan", appearances: 443}
+jessica_cruz=  %Lantern{name: "Jessica Cruz", sector: 2814, home_town: "Portland, Oregon", appearances: 431}
+sojourner_mullein =  %Lantern{name: "Sojourner Mullein", sector: 2814, home_town: "New York City, New York", appearances: 72}
+green_lanterns_from_earth = [hal_jordan, guy_gardner, john_stewart, kyle_rayner, simon_baz, jessica_cruz, sojourner_mullein]
+```
+
+As these Green Lanterns all have a hometown on Earth we can also specifity the coordinates of these locations.
+
+```elixir
+hometown_coordinates = %{
+  "coordinates" => ["37.865894, -122.498055", "39.299236, -76.609383", "42.331429, -83.045753", "34.052235, -118.243683", "42.322262, -83.176315", "45.523064, -122.676483", "40.730610, -73.935242"],
+  "name" => ["Coast City", "Baltimore", "Detroit", "Los Angeles", "Dearborn", "Portland", "New York City"]
+}
+```
+
+The above coordinates can be used to create a map that shows these locations. Although this map could be created programmatically, Livebook has the notion of `smart cells` with which UI components can be rapidly created. The following map was created using this feature.
+
+<!-- livebook:{"attrs":"eyJjZW50ZXIiOiItOTguNTc5NSwgMzkuODI4MiIsImxheWVycyI6W3siYWN0aXZlIjp0cnVlLCJjbHVzdGVyX2NvbG9ycyI6WyIjNTFiYmQ2IiwiI2YxZjA3NSIsIiNmMjhjYjEiXSwiY2x1c3Rlcl9tYXgiOjc1MCwiY2x1c3Rlcl9taW4iOjEwMCwiY29vcmRpbmF0ZXNfZm9ybWF0IjoibGF0X2xuZyIsImxheWVyX2NvbG9yIjoiIzAwZmYwMCIsImxheWVyX29wYWNpdHkiOjEsImxheWVyX3JhZGl1cyI6NCwibGF5ZXJfc291cmNlIjoiaG9tZXRvd25fY29vcmRpbmF0ZXMiLCJsYXllcl9zb3VyY2VfcXVlcnkiOm51bGwsImxheWVyX3NvdXJjZV9xdWVyeV9zdHJpY3QiOm51bGwsImxheWVyX3R5cGUiOiJjbHVzdGVyIiwic291cmNlX2Nvb3JkaW5hdGVzIjoiY29vcmRpbmF0ZXMiLCJzb3VyY2VfbGF0aXR1ZGUiOm51bGwsInNvdXJjZV9sb25naXR1ZGUiOm51bGwsInNvdXJjZV90eXBlIjoidGFibGUifV0sIm1hcHRpbGVyX2tleSI6bnVsbCwibWFwdGlsZXJfa2V5X3NlY3JldCI6bnVsbCwibWxfYWxpYXMiOiJFbGl4aXIuTWFwTGlicmUiLCJzdHlsZSI6ImRlZmF1bHQiLCJ1c2VfbWFwdGlsZXJfa2V5X3NlY3JldCI6dHJ1ZSwiem9vbSI6M30","chunks":null,"kind":"Elixir.KinoMapLibre.MapCell","livebook_object":"smart_cell"} -->
+
+```elixir
+MapLibre.new(center: {-98.5795, 39.8282}, zoom: 3)
+|> MapLibre.add_table_source(
+  "hometown_coordinates_clustered",
+  hometown_coordinates,
+  {:lat_lng, "coordinates"},
+  cluster: true
+)
+|> MapLibre.add_layer(
+  id: "hometown_coordinates_clustered_cluster_1",
+  source: "hometown_coordinates_clustered",
+  type: :circle,
+  paint: [
+    circle_color: [
+      "step",
+      ["get", "point_count"],
+      "#51bbd6",
+      100,
+      "#f1f075",
+      750,
+      "#f28cb1"
+    ],
+    circle_radius: ["step", ["get", "point_count"], 20, 100, 30, 750, 40]
+  ]
+)
+|> MapLibre.add_layer(
+  id: "hometown_coordinates_count",
+  source: "hometown_coordinates_clustered",
+  type: :symbol,
+  layout: [text_field: "{point_count_abbreviated}", text_size: 10],
+  paint: [text_color: "black"]
+)
+```
+
+In addition to Green Lanterns there are also Lanterns of Other colors in the comics as well. Thankfully our `Lantern` struct also helps us to specify these as well.
+
+```elixir
+atrocitus = %Lantern{name: "Atrocitus", color: :red, sector: 666, appearances: 321}
+bleez = %Lantern{name: "Bleez", color: :red, sector: 33, appearances: 198}
+red_lanterns = [atrocitus, bleez]
+```
+
+We can combine these two lists into one one list of Lanterns with some Elixir code.
+
+```elixir
+lanterns = green_lanterns_from_earth ++ red_lanterns
+```
+
+With all this data available we can create a data structure combining together the lanterns names, number of appearances and color.
+
+```elixir
+lantern_appearances = Enum.reduce(lanterns, %{lanterns: [], appearances: [], color: []}, fn lantern, acc ->
+  %{
+    lanterns: acc.lanterns ++ [lantern.name],
+    appearances: acc.appearances ++ [lantern.appearances],
+    color: acc.color ++ [lantern.color]
+  }
+end)
+```
+
+The information in the above data structure can be used to create a chart that lists the appearances of the laterns. Instead of a smart cell, here we programmatically create the chart with the following code:
+
+```elixir
+VegaLite.new(title: "Lantern Appearances")
+|> VegaLite.data_from_values(lantern_appearances, only: ["lanterns", "appearances", "color"])
+|> VegaLite.mark(:bar)
+|> VegaLite.encode_field(:x, "lanterns", type: :nominal)
+|> VegaLite.encode_field(:y, "appearances", type: :quantitative)
+|> VegaLite.encode_field(:color, "color",
+  type: :nominal,
+  title: "Lantern Color",
+  scale: [
+    domain: ["green", "red"],
+    range: ["green", "red"]
+  ])
+```
+
+One interesting addition to make to the notebooks, is to add AI functionality. For example we can add through the use of a smart cell a question answering system with only a few clicks. We can for example ask "Who are Green Lanterns?" based on a text description, such as that earlier in this notebook.
+
+<!-- livebook:{"attrs":"eyJjb21waWxlciI6ImV4bGEiLCJzZXF1ZW5jZV9sZW5ndGgiOjUwMCwidGFza19pZCI6InF1ZXN0aW9uX2Fuc3dlcmluZyIsInZhcmlhbnRfaWQiOiJkaXN0aWxiZXJ0X2Jhc2VfY2FzZWQifQ","chunks":[[0,368],[370,595]],"kind":"Elixir.KinoBumblebee.TaskCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, model_info} =
+  Bumblebee.load_model({:hf, "distilbert/distilbert-base-cased-distilled-squad"})
+
+{:ok, tokenizer} =
+  Bumblebee.load_tokenizer({:hf, "distilbert/distilbert-base-cased-distilled-squad"})
+
+serving =
+  Bumblebee.Text.question_answering(model_info, tokenizer,
+    compile: [batch_size: 1, sequence_length: 500],
+    defn_options: [compiler: EXLA]
+  )
+
+inputs = [
+  question: Kino.Input.text("Question", default: "Where do I live?"),
+  context:
+    Kino.Input.textarea("Context", default: "My name is Sarah and I live in London.")
+]
+
+form = Kino.Control.form(inputs, submit: "Run")
+frame = Kino.Frame.new()
+
+Kino.listen(form, fn %{data: %{question: question, context: context}} ->
+  output = Nx.Serving.run(serving, %{question: question, context: context})
+
+  output.results
+  |> Enum.map(&{&1.text, &1.score})
+  |> Kino.Bumblebee.ScoredList.new()
+  |> then(&Kino.Frame.render(frame, &1))
+end)
+
+Kino.Layout.grid([form, frame], boxed: true, gap: 16)
+```
+
+Even AI based image generation can be embedded with smart cells. We can use this to generate an image of a Green Lantern power ring.
+
+<!-- livebook:{"attrs":"eyJjb21waWxlciI6ImV4bGEiLCJudW1faW1hZ2VzX3Blcl9wcm9tcHQiOjEsIm51bV9zdGVwcyI6MjAsInNlcXVlbmNlX2xlbmd0aCI6NTAsInRhc2tfaWQiOiJ0ZXh0X3RvX2ltYWdlIiwidmFyaWFudF9pZCI6InN0YWJsZV9kaWZmdXNpb25fbW9kZXJuX2Rpc25leSJ9","chunks":[[0,984],[986,614]],"kind":"Elixir.KinoBumblebee.TaskCell","livebook_object":"smart_cell"} -->
+
+```elixir
+repository_id = "nitrosocke/mo-di-diffusion"
+{:ok, tokenizer} = Bumblebee.load_tokenizer({:hf, "openai/clip-vit-large-patch14"})
+{:ok, clip} = Bumblebee.load_model({:hf, repository_id, subdir: "text_encoder"})
+{:ok, unet} = Bumblebee.load_model({:hf, repository_id, subdir: "unet"})
+
+{:ok, vae} =
+  Bumblebee.load_model({:hf, repository_id, subdir: "vae"}, architecture: :decoder)
+
+{:ok, scheduler} = Bumblebee.load_scheduler({:hf, repository_id, subdir: "scheduler"})
+
+{:ok, featurizer} =
+  Bumblebee.load_featurizer({:hf, repository_id, subdir: "feature_extractor"})
+
+{:ok, safety_checker} =
+  Bumblebee.load_model({:hf, repository_id, subdir: "safety_checker"})
+
+serving =
+  Bumblebee.Diffusion.StableDiffusion.text_to_image(clip, unet, vae, tokenizer, scheduler,
+    num_steps: 20,
+    num_images_per_prompt: 1,
+    safety_checker: safety_checker,
+    safety_checker_featurizer: featurizer,
+    compile: [batch_size: 1, sequence_length: 50],
+    defn_options: [compiler: EXLA]
+  )
+
+text_input = Kino.Input.textarea("Text", default: "modern disney style grumpy cat")
+seed_input = Kino.Input.number("Seed")
+form = Kino.Control.form([text: text_input, seed: seed_input], submit: "Run")
+frame = Kino.Frame.new()
+
+Kino.listen(form, fn %{data: %{text: text, seed: seed}} ->
+  Kino.Frame.render(frame, Kino.Text.new("Running..."))
+  output = Nx.Serving.run(serving, %{prompt: text, seed: seed})
+
+  for result <- output.results do
+    Kino.Image.new(result.image)
+  end
+  |> Kino.Layout.grid(columns: 2)
+  |> then(&Kino.Frame.render(frame, &1))
+end)
+
+Kino.Layout.grid([form, frame], boxed: true, gap: 16)
+```
